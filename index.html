@@ -23,7 +23,7 @@
 .modal{display:none;position:fixed;inset:0;background:#000b;z-index:10;align-items:center;justify-content:center;padding:16px;overflow:auto}
 .modal.open{display:flex}.box{width:min(620px,100%);max-height:calc(100vh - 32px);overflow-y:auto;background:#151515;border:1px solid #d7a735;border-radius:10px;padding:24px;line-height:1.5;box-shadow:0 15px 60px #000}
 .close{position:absolute;left:18px;top:12px;background:none;border:0;color:#bbb;font-size:30px}.box{position:relative}.gold{color:#e1b03d}
-.opts{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0 16px}.opt{background:#090909;color:#fff;border:1px solid #555;padding:9px 13px;border-radius:4px;cursor:pointer}.opt.sel{border-color:#e1b03d;color:#e1b03d}
+.opts{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 16px}.model-options .opt{width:120px;min-height:92px;padding:0;display:flex;align-items:flex-end;justify-content:center;overflow:hidden;background:linear-gradient(#252525 0 62%,#090909 62% 100%)}.model-options .opt::before{content:"صورة الموديل";position:absolute;transform:translateY(-28px);font-size:10px;color:#777}.model-options .opt{position:relative}.opt{background:#090909;color:#fff;border:1px solid #555;padding:9px 13px;border-radius:4px;cursor:pointer}.opt.sel{border-color:#e1b03d;color:#e1b03d}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{display:flex;flex-direction:column;gap:5px}.field.full{grid-column:1/-1}.field label{color:#aaa;font-size:12px}.field input,.field textarea{background:#080808;color:#fff;border:1px solid #444;padding:11px;border-radius:4px}
 .send{width:100%;margin-top:14px;padding:13px;border:0;border-radius:4px;background:#e1b03d;color:#111;font-weight:900;font-size:16px}.done{text-align:center;display:none}.done.show{display:block}.check{font-size:55px;color:#e1b03d}
 @media(max-width:650px){.stage{min-width:0}.grid{grid-template-columns:1fr}.field.full{grid-column:auto}.box{padding:20px}.hot{display:block}}
@@ -61,7 +61,7 @@
 <div class="field"><label>الكمية *</label><input id="qty" type="number" min="1" value="1"></div>
 <div class="field full"><label>العنوان بالتفصيل *</label><textarea id="address"></textarea></div>
 </div>
-<button class="send" onclick="sendOrder()">اطلب الآن</button>
+<button type="button" class="send" id="sendOrderBtn">اطلب الآن</button>
 </div>
 <div class="done" id="done"><div class="check">✓</div><h2>تم استلام طلبك</h2><p id="orderNo"></p><p>سيتم التواصل معك لتأكيد الطلب.</p></div>
 </div>
@@ -85,7 +85,7 @@ const addressEl = document.getElementById('address');
 const orderNoEl = document.getElementById('orderNo');
 
 function openProduct(n,p){
-  state = {name:n, price:p, model:models[0], color:colors[0], size:sizes[1]};
+  state = {name:n, price:p, color:'أسود', size:'M'};
   pnameEl.textContent = n;
   priceEl.textContent = p;
   makeOptions(models,'models','model');
@@ -130,24 +130,6 @@ function buildOrderText(no){
     'العنوان: ' + encodeURIComponent(addressEl.value.trim());
 }
 
-async function shareProductImage(text){
-  const img = document.querySelector('.stage > img');
-  try {
-    if (!img || !img.src.startsWith('data:')) return false;
-    const parts = img.src.split(',');
-    const mime = (parts[0].match(/data:([^;]+);/) || [,'image/png'])[1];
-    const bin = atob(parts[1]);
-    const bytes = new Uint8Array(bin.length);
-    for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
-    const file = new File([bytes], 'F5M-المنتج.png', {type:mime});
-    const data = {title:'طلب F5M', text:text, files:[file]};
-    if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
-      await navigator.share(data);
-      return true;
-    }
-  } catch(e) {}
-  return false;
-}
 
 function sendOrder(){
   if(!nameEl.value.trim() || !phoneEl.value.trim() || !govEl.value.trim() || !addressEl.value.trim()){
@@ -161,43 +143,50 @@ function sendOrder(){
   }
 
   const no = 'F5M-' + Date.now().toString().slice(-7);
-  const orders = JSON.parse(localStorage.getItem('f5m_orders') || '[]');
-  orders.push({
-    no,
-    customer:nameEl.value.trim(),
-    phone:phoneEl.value.trim(),
-    gov:govEl.value.trim(),
-    address:addressEl.value.trim(),
-    qty:qtyEl.value,
-    product:{...state},
-    status:'جديد',
-    created:new Date().toISOString()
-  });
-  localStorage.setItem('f5m_orders', JSON.stringify(orders));
+
+  const order = {
+    no: no,
+    customer: nameEl.value.trim(),
+    phone: phoneEl.value.trim(),
+    gov: govEl.value.trim(),
+    address: addressEl.value.trim(),
+    qty: qtyEl.value,
+    product: {...state},
+    status: 'جديد',
+    created: new Date().toISOString()
+  };
+
+  try {
+    const orders = JSON.parse(localStorage.getItem('f5m_orders') || '[]');
+    orders.push(order);
+    localStorage.setItem('f5m_orders', JSON.stringify(orders));
+  } catch(e) {}
 
   const text = [
-    'طلب جديد من موقع F5M',
-    'رقم الطلب: ' + no,
-    'المنتج: ' + state.name,
-    'السعر: ' + state.price + ' جنيه',
-    'الموديل: ' + state.model,
-    'اللون: ' + state.color,
-    'المقاس: ' + state.size,
-    'الكمية: ' + qtyEl.value,
-    'الاسم: ' + nameEl.value.trim(),
-    'الهاتف: ' + phoneEl.value.trim(),
-    'المحافظة: ' + govEl.value.trim(),
-    'العنوان: ' + addressEl.value.trim()
-  ].join('\\n');
+    '🛍️ طلب جديد من موقع F5M',
+    '',
+    '🔢 رقم الطلب: ' + no,
+    '👕 المنتج: ' + state.name,
+    '💰 السعر: ' + state.price + ' جنيه',
+    '🧩 الموديل: ' + state.model,
+    '🎨 اللون: ' + state.color,
+    '📏 المقاس: ' + state.size,
+    '🔢 الكمية: ' + qtyEl.value,
+    '👤 الاسم: ' + nameEl.value.trim(),
+    '📱 الهاتف: ' + phoneEl.value.trim(),
+    '📍 المحافظة: ' + govEl.value.trim(),
+    '🏠 العنوان: ' + addressEl.value.trim()
+  ].join('
+');
 
-  // افتح واتساب مباشرة من ضغطة العميل، بدون navigator.share الذي كان يوقف الزر.
   const whatsapp = 'https://wa.me/201025543017?text=' + encodeURIComponent(text);
-  window.location.href = whatsapp;
 
-  formEl.style.display = 'none';
-  orderNoEl.textContent = 'رقم الطلب: ' + no;
-  doneEl.classList.add('show');
+  // افتح واتساب مباشرة من ضغطة العميل — بدون navigator.share أو انتظار أي API.
+  window.location.href = whatsapp;
 }
+
+document.getElementById('sendOrderBtn').addEventListener('click', sendOrder);
+
 </script>
 </body>
 </html>
