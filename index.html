@@ -120,30 +120,53 @@ function makeOptions(arr,id,key){
 }
 function closeModal(){modal.classList.remove('open')}
 function sendOrder(){
- if(!name.value.trim()||!phone.value.trim()||!gov.value.trim()||!address.value.trim()){alert('من فضلك أكمل بيانات الطلب');return}
+ const nameEl=document.getElementById('name');
+ const phoneEl=document.getElementById('phone');
+ const govEl=document.getElementById('gov');
+ const qtyEl=document.getElementById('qty');
+ const addressEl=document.getElementById('address');
+
+ if(!nameEl.value.trim()||!phoneEl.value.trim()||!govEl.value.trim()||!addressEl.value.trim()){
+  alert('من فضلك أكمل بيانات الطلب');
+  return;
+ }
+
  const no='F5M-'+Date.now().toString().slice(-7);
  const order={
-  no,customer:name.value.trim(),phone:phone.value.trim(),gov:gov.value.trim(),
-  address:address.value.trim(),qty:qty.value||1,product:state,status:'جديد',created:new Date().toISOString()
+  no,
+  customer:nameEl.value.trim(),
+  phone:phoneEl.value.trim(),
+  gov:govEl.value.trim(),
+  address:addressEl.value.trim(),
+  qty:qtyEl.value||1,
+  product:state,
+  status:'جديد',
+  created:new Date().toISOString()
  };
+
  const orders=JSON.parse(localStorage.getItem('f5m_orders')||'[]');
- orders.push(order);localStorage.setItem('f5m_orders',JSON.stringify(orders));
+ orders.push(order);
+ localStorage.setItem('f5m_orders',JSON.stringify(orders));
 
  const message =
-  'طلب جديد من موقع F5M%0A%0A'+
-  'رقم الطلب: '+encodeURIComponent(no)+'%0A'+
-  'المنتج: '+encodeURIComponent(state.name)+'%0A'+
-  'الموديل: '+encodeURIComponent(state.model)+'%0A'+
-  'اللون: '+encodeURIComponent(state.color)+'%0A'+
-  'المقاس: '+encodeURIComponent(state.size)+'%0A'+
-  'الكمية: '+encodeURIComponent(qty.value||1)+'%0A'+
-  'الاسم: '+encodeURIComponent(name.value.trim())+'%0A'+
-  'الهاتف: '+encodeURIComponent(phone.value.trim())+'%0A'+
-  'المحافظة: '+encodeURIComponent(gov.value.trim())+'%0A'+
-  'العنوان: '+encodeURIComponent(address.value.trim());
+  'طلب جديد من موقع F5M\n\n'+
+  'رقم الطلب: '+no+'\n'+
+  'المنتج: '+state.name+'\n'+
+  'الموديل: '+state.model+'\n'+
+  'اللون: '+state.color+'\n'+
+  'المقاس: '+state.size+'\n'+
+  'الكمية: '+(qtyEl.value||1)+'\n'+
+  'الاسم: '+nameEl.value.trim()+'\n'+
+  'الهاتف: '+phoneEl.value.trim()+'\n'+
+  'المحافظة: '+govEl.value.trim()+'\n'+
+  'العنوان: '+addressEl.value.trim();
 
- form.style.display='none';orderNo.textContent='رقم الطلب: '+no;done.classList.add('show');
- window.open('https://wa.me/201025543017?text='+message,'_blank');
+ form.style.display='none';
+ orderNo.textContent='رقم الطلب: '+no;
+ done.classList.add('show');
+
+ // فتح واتساب مباشرة بدون popup/new-window حتى يعمل على الموبايل.
+ window.location.href='https://wa.me/201025543017?text='+encodeURIComponent(message);
 }
 </script>
 </body>
